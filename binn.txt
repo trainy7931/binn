@@ -1,0 +1,1214 @@
+2
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n, opt;
+    cout << "Enter number of elements: ";
+    cin >> n;
+
+    vector<double> data(n);
+    cout << "Enter " << n << " numbers: ";
+    for (int i = 0; i < n; i++) {
+        cin >> data[i];
+    }
+
+    cout << "\nChoose option:\n1. Min-Max Normalization\n2. Z-Score Normalization\nOption: ";
+    cin >> opt;
+
+    
+
+    switch (opt) {
+        case 1: {
+            double new_min, new_max;
+            cout << "Enter new min: ";
+            cin >> new_min;
+            cout << "Enter new max: ";
+            cin >> new_max;
+
+            double old_min = *min_element(data.begin(), data.end());
+            double old_max = *max_element(data.begin(), data.end());
+
+            cout << "\nOriginal\tNormalized\n";
+            for (double x : data) {
+                double norm = ((x - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min;
+                cout << x << "\t\t" << norm << endl;
+            }
+            break;
+        }
+
+        case 2: {
+            double sum = accumulate(data.begin(), data.end(), 0.0);
+            double mean = sum / n;
+
+            double sq_sum = 0;
+            for (double x : data) sq_sum += pow(x - mean, 2);
+            double std_dev = sqrt(sq_sum / n);
+
+            cout << "\nOriginal\tNormalized\n";
+            for (double x : data) {
+                double norm = (x - mean) / std_dev;
+                cout << x << "\t\t" << norm << endl;
+            }
+            break;
+        }
+
+        default:
+            cout << "Invalid option!" << endl;
+    }
+    return 0;
+}
+3
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <map>
+#include <algorithm>
+using namespace std;
+
+vector<string> cols;
+vector<vector<string>> data;
+
+int getCol(string name) {
+    transform(name.begin(), name.end(), name.begin(), ::tolower);
+    for (int i = 0; i < cols.size(); i++) {
+        string c = cols[i];
+        transform(c.begin(), c.end(), c.begin(), ::tolower);
+        if (c == name) return i;
+    }
+    return -1;
+}
+
+void loadCSV(string filename) {
+    ifstream f(filename);
+    string line, cell;
+    getline(f, line); // header
+    stringstream ss(line);
+    while (getline(ss, cell, ',')) cols.push_back(cell);
+    while (getline(f, line)) {
+        stringstream row(line);
+        vector<string> r;
+        while (getline(row, cell, ',')) r.push_back(cell);
+        data.push_back(r);
+    }
+}
+
+void print(vector<vector<string>> rows) {
+    for (auto& r : rows) {
+        for (auto& c : r) cout << c << "\t";
+        cout << "\n";
+    }
+}
+
+// Slice: filter on one condition
+void slice() {
+    string col, val; 
+    cout << "Column: "; cin >> col;
+    cout << "Value: "; cin >> val;
+    int c = getCol(col);
+    for (auto& r : data)
+        if (r[c] == val) print({r});
+}
+
+// Dice: multiple conditions
+void dice() {
+    int n; cout << "No. of conditions: "; cin >> n;
+    vector<pair<int, string>> cond;
+    for (int i = 0; i < n; i++) {
+        string c, v; 
+        cout << "Column: "; cin >> c;
+        cout << "Value: "; cin >> v;
+        cond.push_back({getCol(c), v});
+    }
+    for (auto& r : data) {
+        bool ok = true;
+        for (auto& x : cond) if (r[x.first] != x.second) ok = false;
+        if (ok) print({r});
+    }
+}
+
+// Roll-up: group and sum
+void rollup() {
+    string grp, agg;
+    cout << "Group by: "; cin >> grp;
+    cout << "Sum of: "; cin >> agg;
+    int g = getCol(grp), a = getCol(agg);
+    map<string, double> res;
+    for (auto& r : data) res[r[g]] += stod(r[a]);
+    for (auto& x : res) cout << x.first << "\t" << x.second << "\n";
+}
+
+// Drill-down: multiple group levels
+void drilldown() {
+    string cols_in, agg;
+    cout << "Group by (comma separated): "; cin >> cols_in;
+    cout << "Sum of: "; cin >> agg;
+    vector<int> gs; string col;
+    stringstream ss(cols_in);
+    while (getline(ss, col, ',')) gs.push_back(getCol(col));
+    int a = getCol(agg);
+    map<string, double> res;
+    for (auto& r : data) {
+        string key = "";
+        for (int i : gs) key += r[i] + "|";
+        res[key] += stod(r[a]);
+    }
+    for (auto& x : res) cout << x.first << "\t" << x.second << "\n";
+}
+
+int main() {
+    string file; 
+    cout << "CSV file: "; cin >> file;
+    loadCSV(file);
+
+    cout << "Columns: ";
+    for (auto& c : cols) cout << c << " ";
+    cout << "\n";
+
+    while (true) {
+        cout << "\n1.Slice 2.Dice 3.Rollup 4.Drilldown 5.Exit\nChoice: ";
+        int ch; cin >> ch;
+        if (ch == 1) slice();
+        else if (ch == 2) dice();
+        else if (ch == 3) rollup();
+        else if (ch == 4) drilldown();
+        else break;
+    }
+}
+
+
+Car Name	Male Count	Female Count
+Alto	256	138
+Omni	187	81
+City	332	151
+WagonR	743	478
+Cybertruck	34	21
+Scorpio	109	56
+Indica	287	159
+Harrier	200	76
+Benz	50	13
+Phantom	7	3
+
+
+
+
+4
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <iomanip>
+using namespace std;
+
+int main() {
+    string filename;
+    cout << "Enter CSV filename: ";
+    cin >> filename;
+
+    ifstream file(filename);
+    string line, cat;
+    int c1, c2, totC1 = 0, totC2 = 0;
+    vector<tuple<string, int, int>> data;
+
+    getline(file, line); // Skip header
+    while (getline(file, line)) {
+        stringstream ss(line);
+        getline(ss, cat, ',');
+        ss >> c1; 
+        ss.ignore();
+        ss >> c2;
+        data.push_back({cat, c1, c2});
+        totC1 += c1; totC2 += c2;
+    }
+    file.close();
+
+    ofstream out("twt_dwt_output.csv");
+    out << "Category,Class1,Twt,Dwt,Class2,Twt,Dwt,Total\n";
+
+    cout << "\nTwt and Dwt Results:\n\n";
+    cout << left << setw(12) << "Category" << setw(8) << "C1" << setw(8) << "Twt%" 
+         << setw(8) << "Dwt%" << setw(8) << "C2" << setw(8) << "Twt%" 
+         << setw(8) << "Dwt%" << "Total\n";
+
+    for (auto& row : data) {
+        string category = get<0>(row);
+        int class1 = get<1>(row), class2 = get<2>(row);
+        int tot = class1 + class2;
+        double c1T = class1 * 100.0 / tot;
+        double c1D = class1 * 100.0 / totC1;
+        double c2T = class2 * 100.0 / tot;
+        double c2D = class2 * 100.0 / totC2;
+
+        cout << left << setw(12) << category << setw(8) << class1 << setw(8) << fixed 
+             << setprecision(1) << c1T << setw(8) << c1D << setw(8) << class2 
+             << setw(8) << c2T << setw(8) << c2D << tot << endl;
+
+        out << category << "," << class1 << "," << c1T << "%," << c1D << "%," 
+            << class2 << "," << c2T << "%," << c2D << "%," << tot << "\n";
+    }
+
+    cout << left << setw(12) << "Total" << setw(8) << totC1 << setw(8) << "100.0" 
+         << setw(8) << "100.0" << setw(8) << totC2 << setw(8) << "100.0" 
+         << setw(8) << "100.0" << totC1 + totC2 << endl;
+
+    out << "Total," << totC1 << ",100%,100%," << totC2 << ",100%,100%," << totC1 + totC2 << "\n";
+    out.close();
+
+    cout << "\nSaved to twt_dwt_output.csv\n";
+    return 0;
+}
+
+5
+#include<bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cout << "Enter number of elements: ";
+    cin >> n;
+    
+    vector<double> data(n);
+    cout << "Enter " << n << " numbers: ";
+    for(int i = 0; i < n; i++) {
+        cin >> data[i];
+    }
+    
+    sort(data.begin(), data.end());
+    
+    double minimum = data[0];
+    double maximum = data[n-1];
+    double median = (n%2==0) ? (data[n/2-1] + data[n/2])/2.0 : data[n/2];
+    
+    int lh = n/2;
+    double q1 = (lh%2==0) ? (data[lh/2-1] + data[lh/2])/2.0 : data[lh/2];
+    
+    int uh = n - n/2;
+    double q3 = (uh%2==0) ? (data[n/2 + uh/2-1] + data[n/2 + uh/2])/2.0 : data[n/2 + uh/2];
+    
+    cout <<"\nFive-Number Summary:" << endl;
+    cout << "Minimum   : " << minimum << endl;
+    cout << "Q1        : " << q1 << endl;
+    cout << "Median    : " << median << endl;
+    cout << "Q3        : " << q3 << endl;
+    cout << "Maximum   : " << maximum << endl;
+    
+    return 0;
+}
+
+
+6
+#include <bits/stdc++.h>
+using namespace std;
+
+// Function to calculate support count of an itemset
+int getSupport(const set<string>& itemset, const vector<set<string>>& transactions) {
+    int count = 0;
+    for (auto& t : transactions)
+        if (includes(t.begin(), t.end(), itemset.begin(), itemset.end()))
+            count++;
+    return count;
+}
+
+// Function to check if a candidate has any infrequent subset
+bool hasInfrequentSubset(const set<string>& candidate, const map<set<string>, int>& prevLevel) {
+    for (auto it = candidate.begin(); it != candidate.end(); ++it) {
+        set<string> subset = candidate;
+        subset.erase(*it);
+        if (prevLevel.find(subset) == prevLevel.end())
+            return true; // has an infrequent subset
+    }
+    return false;
+}
+
+// Main Apriori algorithm
+void apriori(vector<set<string>>& transactions, double minSup) {
+    int minCount = (minSup < 1) ? ceil(minSup * transactions.size()) : (int)minSup;
+    map<int, map<set<string>, int>> allFrequentSets;
+    
+    // Step 1: Generate L1 (frequent 1-itemsets)
+    for (auto& t : transactions)
+        for (auto& item : t)
+            allFrequentSets[1][{item}]++;
+    
+    // Remove infrequent items from L1
+    for (auto it = allFrequentSets[1].begin(); it != allFrequentSets[1].end();)
+        (it->second < minCount) ? it = allFrequentSets[1].erase(it) : ++it;
+    
+    // Step 2: Generate higher-order itemsets (L2, L3, ...)
+    int k = 2;
+    while (!allFrequentSets[k - 1].empty()) {
+        vector<set<string>> prevItems;
+        for (auto& p : allFrequentSets[k - 1])
+            prevItems.push_back(p.first);
+        
+        // Candidate generation by joining itemsets
+        for (int i = 0; i < prevItems.size(); i++) {
+            for (int j = i + 1; j < prevItems.size(); j++) {
+                set<string> candidate = prevItems[i];
+                candidate.insert(prevItems[j].begin(), prevItems[j].end());
+                
+                if (candidate.size() == k && !hasInfrequentSubset(candidate, allFrequentSets[k - 1])) {
+                    int support = getSupport(candidate, transactions);
+                    if (support >= minCount)
+                        allFrequentSets[k][candidate] = support;
+                }
+            }
+        }
+        k++;
+    }
+    
+    // Step 3: Print all frequent itemsets
+    cout << "\n=== Frequent Itemsets ===\n";
+    for (auto& level : allFrequentSets) {
+        if (level.second.empty()) continue;
+        cout << "\nL" << level.first << ":\n";
+        for (auto& p : level.second) {
+            cout << "  {";
+            for (auto it = p.first.begin(); it != p.first.end(); ++it)
+                cout << (it != p.first.begin() ? "," : "") << *it;
+            cout << "} -> count=" << p.second
+                 << ", support=" << fixed << setprecision(2)
+                 << p.second / (double)transactions.size() << "\n";
+        }
+    }
+}
+
+int main() {
+    int n;
+    double minSup;
+    vector<set<string>> transactions;
+    
+    cout << "Enter number of transactions: ";
+    cin >> n;
+    cin.ignore();
+    
+    // Input transactions
+    for (int i = 0; i < n; i++) {
+        cout << "Transaction " << i + 1 << " (items separated by space): ";
+        string line;
+        getline(cin, line);
+        set<string> items;
+        stringstream ss(line);
+        string item;
+        while (ss >> item)
+            items.insert(item);
+        transactions.push_back(items);
+    }
+    
+    // Input minimum support
+    cout << "Enter minimum support : ";
+    cin >> minSup;
+    
+    // Run Apriori algorithm
+    apriori(transactions, minSup);
+    return 0;
+}
+
+7
+#include <bits/stdc++.h>
+using namespace std;
+
+// Function to calculate support count of a given itemset
+int getSupport(const set<string>& itemset, const vector<set<string>>& trans) {
+    int count = 0;
+    for (auto& t : trans)
+        if (includes(t.begin(), t.end(), itemset.begin(), itemset.end()))
+            count++;
+    return count;
+}
+
+int main() {
+    int n;
+    double minSup, minConf;
+    cout << "Enter number of transactions: ";
+    cin >> n;
+    cin.ignore();
+
+    vector<set<string>> trans;
+    for (int i = 0; i < n; i++) {
+        cout << "Transaction " << i+1 << ": ";
+        string line, item;
+        getline(cin, line);
+        stringstream ss(line);
+        set<string> temp;
+        while (ss >> item) temp.insert(item);
+        trans.push_back(temp);
+    }
+
+    cout << "Enter minimum support (e.g. 0.4): ";
+    cin >> minSup;
+    cout << "Enter minimum confidence (e.g. 0.6): ";
+    cin >> minConf;
+
+    int minCount = ceil(minSup * n);
+    map<int, map<set<string>, int>> L; // L[k] = frequent k-itemsets
+
+    // L1 generation
+    for (auto& t : trans)
+        for (auto& i : t)
+            L[1][{i}]++;
+
+    // Remove infrequent items
+    for (auto it = L[1].begin(); it != L[1].end(); )
+        (it->second < minCount) ? it = L[1].erase(it) : ++it;
+
+    // Generate L2, L3, ...
+    int k = 2;
+    while (!L[k-1].empty()) {
+        vector<set<string>> prev;
+        for (auto& p : L[k-1]) prev.push_back(p.first);
+
+        // Join step
+        for (int i = 0; i < prev.size(); i++) {
+            for (int j = i+1; j < prev.size(); j++) {
+                set<string> c = prev[i];
+                c.insert(prev[j].begin(), prev[j].end());
+                if (c.size() == k) {
+                    int sup = getSupport(c, trans);
+                    if (sup >= minCount)
+                        L[k][c] = sup;
+                }
+            }
+        }
+        k++;
+    }
+
+    // Print all frequent itemsets
+    cout << "\n=== Frequent Itemsets ===\n";
+    for (auto& level : L) {
+        if (level.second.empty()) continue;
+        cout << "\nL" << level.first << ":\n";
+        for (auto& p : level.second) {
+            cout << "  {";
+            for (auto it = p.first.begin(); it != p.first.end(); it++)
+                cout << (it != p.first.begin() ? "," : "") << *it;
+            cout << "} -> support = " << (double)p.second / n << endl;
+        }
+    }
+
+    // Generate Association Rules
+    cout << "\n=== Association Rules (minConf = " << minConf << ") ===\n";
+    for (auto& level : L) {
+        if (level.first < 2) continue;
+        for (auto& p : level.second) {
+            const set<string>& itemset = p.first;
+            int itemsetSup = p.second;
+
+            vector<string> items(itemset.begin(), itemset.end());
+            int sz = items.size();
+
+            // Generate all non-empty proper subsets
+            for (int mask = 1; mask < (1 << sz) - 1; mask++) {
+                set<string> A, B;
+                for (int i = 0; i < sz; i++) {
+                    if (mask & (1 << i)) A.insert(items[i]);
+                    else B.insert(items[i]);
+                }
+                int supA = getSupport(A, trans);
+                double conf = (double)itemsetSup / supA;
+                if (conf >= minConf) {
+                    cout << "  {";
+                    for (auto it = A.begin(); it != A.end(); it++)
+                        cout << (it != A.begin() ? "," : "") << *it;
+                    cout << "} => {";
+                    for (auto it = B.begin(); it != B.end(); it++)
+                        cout << (it != B.begin() ? "," : "") << *it;
+                    cout << "}  (conf=" << conf << ", supp=" << (double)itemsetSup / n << ")\n";
+                }
+            }
+        }
+    }
+}
+
+
+8
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <iomanip>
+using namespace std;
+
+double findCorrelation(vector<int>& A, vector<int>& B) {
+    int A_count = 0, B_count = 0, common = 0;
+    for (int i = 0; i < A.size(); i++) {
+        A_count += A[i];
+        B_count += B[i];
+        if (A[i] == 1 && B[i] == 1) common++;
+    }
+    return (A_count == 0 || B_count == 0) ? 0 : (double)common / (A_count * B_count);
+}
+
+int main() {
+    ifstream inFile("Correlation_Input.csv");
+    ofstream outFile("Correlation_Output.csv");
+    
+    string line, header;
+    getline(inFile, header);
+    vector<string> entities;
+    stringstream ss(header);
+    string entity;
+    while (getline(ss, entity, ',')) entities.push_back(entity);
+    
+    vector<vector<int>> data(entities.size());
+    while (getline(inFile, line)) {
+        stringstream row(line);
+        string val;
+        int col = 0;
+        while (getline(row, val, ',')) {
+            data[col++].push_back((val == "Y" || val == "1") ? 1 : 0);
+        }
+    }
+    
+    outFile << "Entity 1,Entity 2,Correlation Coefficient,Type of Correlation\n";
+    for (int i = 0; i < entities.size(); i++) {
+        for (int j = i + 1; j < entities.size(); j++) {
+            double corr = findCorrelation(data[i], data[j]);
+            string verdict = (corr == 0) ? "No relationship" : (corr < 0) ? "Negative correlation" : "Positive correlation";
+            cout << "Correlation between " << entities[i] << " & " << entities[j] << ": " << fixed << setprecision(3) << corr << " : " << verdict << endl;
+            outFile << entities[i] << "," << entities[j] << "," << fixed << setprecision(3) << corr << "," << verdict << "\n";
+        }
+    }
+    
+    cout << "\nResults saved in 'Correlation_Output.csv'" << endl;
+    return 0;
+}
+
+
+
+
+
+
+A	B	C
+1	1	0
+1	1	1
+1	0	1
+1	0	1
+0	0	1
+0	0	1
+0	0	1
+0	0	1
+
+
+
+9
+#include<bits/stdc++.h>
+using namespace std;
+
+struct Point {
+    double x, y;
+    int cluster;
+};
+
+double euclideanDistance(Point a, Point b) {
+    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
+}
+
+int main() {
+    int n, k;
+    cout << "Enter number of points: ";
+    cin >> n;
+
+    vector<Point> points(n);
+    cout << "Enter the points (x y):\n";
+    for (int i = 0; i < n; i++) {
+        cin >> points[i].x >> points[i].y;
+        points[i].cluster = -1;
+    }
+
+    cout << "Enter number of clusters (k): ";
+    cin >> k;
+
+    // Initialize cluster centers randomly
+    srand(time(0));
+    vector<Point> centers(k);
+    for (int i = 0; i < k; i++) {
+        int idx = rand() % n;
+        centers[i] = points[idx];
+    }
+
+    bool changed;
+    int iterations = 0;
+
+    do {
+        changed = false;
+
+        // Assign points to nearest cluster
+        for (int i = 0; i < n; i++) {
+            double minDist = INT_MAX;
+            int bestCluster = -1;
+            for (int j = 0; j < k; j++) {
+                double dist = euclideanDistance(points[i], centers[j]);
+                if (dist < minDist) {
+                    minDist = dist;
+                    bestCluster = j;
+                }
+            }
+            if (points[i].cluster != bestCluster) {
+                points[i].cluster = bestCluster;
+                changed = true;
+            }
+        }
+
+        // Recompute centers
+        vector<double> sumX(k, 0), sumY(k, 0);
+        vector<int> count(k, 0);
+        for (int i = 0; i < n; i++) {
+            int c = points[i].cluster;
+            sumX[c] += points[i].x;
+            sumY[c] += points[i].y;
+            count[c]++;
+        }
+        for (int j = 0; j < k; j++) {
+            if (count[j] > 0) {
+                centers[j].x = sumX[j] / count[j];
+                centers[j].y = sumY[j] / count[j];
+            }
+        }
+
+        iterations++;
+    } while (changed && iterations < 100);
+
+    // Print results
+    cout << "\nClustering result:\n";
+    for (int i = 0; i < n; i++) {
+        cout << "Point (" << points[i].x << ", " << points[i].y 
+             << ") -> Cluster " << points[i].cluster + 1 << "\n";
+    }
+
+    cout << "\nFinal cluster centers:\n";
+    for (int j = 0; j < k; j++) {
+        cout << "Cluster " << j + 1 << " center: (" 
+             << centers[j].x << ", " << centers[j].y << ")\n";
+    }
+
+    return 0;
+}
+
+
+
+10
+#include <bits/stdc++.h>
+using namespace std;
+
+struct Point {
+    double x, y;
+    string label;
+};
+
+map<string, int> clusterSize;
+int stepCounter = 1;
+
+// ========================= Utility Functions =========================
+double euclideanDistance(Point a, Point b) {
+    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
+}
+
+void printMatrix(map<string, map<string, double>> &dm) {
+    cout << setw(10) << " ";
+    for (auto &p : dm) cout << setw(10) << p.first;
+    cout << endl;
+
+    for (auto &row : dm) {
+        cout << setw(10) << row.first;
+        for (auto &col : dm) {
+            double val;
+            if (row.first == col.first) val = 0;
+            else if (row.second.count(col.first)) val = row.second[col.first];
+            else val = col.second[row.first];
+            cout << setw(10) << fixed << setprecision(2) << val;
+        }
+        cout << endl;
+    }
+}
+
+// ========================= Distance Matrix Builders =========================
+map<string, map<string, double>> buildFromPoints(vector<Point> &points) {
+    map<string, map<string, double>> dm;
+    for (int i = 0; i < points.size(); i++) {
+        for (int j = i + 1; j < points.size(); j++) {
+            double d = euclideanDistance(points[i], points[j]);
+            dm[points[i].label][points[j].label] = d;
+        }
+        clusterSize[points[i].label] = 1;
+    }
+    return dm;
+}
+
+map<string, map<string, double>> buildFromLowerTriangular(const string &filename) {
+    map<string, map<string, double>> dm;
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error: Cannot open " << filename << endl;
+        exit(1);
+    }
+
+    string line;
+    vector<string> labels;
+    getline(file, line);
+    stringstream header(line);
+    string label;
+    while (getline(header, label, ',')) {
+        if (!label.empty()) labels.push_back(label);
+    }
+
+    int rowIndex = 0;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        string rowLabel, val;
+        getline(ss, rowLabel, ',');
+        clusterSize[rowLabel] = 1;
+
+        for (int col = 0; col < rowIndex; col++) {
+            getline(ss, val, ',');
+            if (!val.empty()) {
+                double d = stod(val);
+                dm[rowLabel][labels[col]] = d;
+            }
+        }
+        rowIndex++;
+    }
+    file.close();
+    return dm;
+}
+
+// ========================= Linkage Distance =========================
+double linkageCalc(const vector<double> &distances, const string &method) {
+    if (method == "single") return *min_element(distances.begin(), distances.end());
+    if (method == "complete") return *max_element(distances.begin(), distances.end());
+    if (method == "average") return accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
+    return *min_element(distances.begin(), distances.end()); // default single
+}
+
+// ========================= Agglomerative Step =========================
+void agglomerative(map<string, map<string, double>> dm, const string &method) {
+    stepCounter = 1;
+    map<string, int> localClusterSize = clusterSize;
+
+    cout << "\n=== " << method << " Linkage Clustering ===\n";
+    printMatrix(dm);
+
+    while (dm.size() > 1) {
+        // Find minimum distance pair
+        string p1, p2;
+        double minDist = DBL_MAX;
+        for (auto &r : dm) {
+            for (auto &c : r.second) {
+                if (r.first != c.first && c.second < minDist) {
+                    minDist = c.second;
+                    p1 = r.first;
+                    p2 = c.first;
+                }
+            }
+        }
+
+        cout << "\nStep " << stepCounter++ << ": Merge " << p1 << " & " << p2
+             << " (Dist = " << minDist << ")\n";
+
+        string newCluster = "(" + p1 + "+" + p2 + ")";
+        localClusterSize[newCluster] = localClusterSize[p1] + localClusterSize[p2];
+
+        // Compute new distances
+        map<string, double> newRow;
+        for (auto &r : dm) {
+            string other = r.first;
+            if (other == p1 || other == p2) continue;
+
+            vector<double> distances;
+            if (dm[other].count(p1)) distances.push_back(dm[other][p1]);
+            if (dm[other].count(p2)) distances.push_back(dm[other][p2]);
+            if (!distances.empty()) {
+                double newDist = linkageCalc(distances, method);
+                newRow[other] = newDist;
+                dm[other][newCluster] = newDist;
+            }
+        }
+
+        // Remove merged clusters
+        dm.erase(p1);
+        dm.erase(p2);
+        for (auto &r : dm) {
+            r.second.erase(p1);
+            r.second.erase(p2);
+        }
+
+        dm[newCluster] = newRow;
+
+        cout << "Updated Distance Matrix:\n";
+        printMatrix(dm);
+    }
+
+    cout << "\n" << method << " linkage clustering complete.\n";
+}
+
+// ========================= Main =========================
+int main() {
+    cout << "Choose Input Type:\n";
+    cout << "1. Lower Triangular Distance Matrix (CSV)\n";
+    cout << "2. 2D Points (CSV with x,y)\n";
+    int choice;
+    cin >> choice;
+
+    cout << "\nChoose Linkage Method:\n";
+    cout << "1. Single\n2. Complete\n3. Average\n4. All\n";
+    int linkChoice;
+    cin >> linkChoice;
+
+    map<string, map<string, double>> distanceMatrix;
+
+    if (choice == 1) {
+        string filename;
+        cout << "Enter distance matrix CSV filename: ";
+        cin >> filename;
+        distanceMatrix = buildFromLowerTriangular(filename);
+    } else if (choice == 2) {
+        string filename;
+        cout << "Enter points CSV filename: ";
+        cin >> filename;
+
+        ifstream file(filename);
+        if (!file.is_open()) {
+            cerr << "Error: Cannot open " << filename << endl;
+            return 1;
+        }
+
+        string line;
+        getline(file, line); // skip header
+        vector<Point> points;
+        int idx = 1;
+        while (getline(file, line)) {
+            stringstream ss(line);
+            string xStr, yStr;
+            getline(ss, xStr, ',');
+            getline(ss, yStr, ',');
+            if (xStr.empty() || yStr.empty()) continue;
+            points.push_back({stod(xStr), stod(yStr), "P" + to_string(idx++)});
+        }
+        file.close();
+
+        distanceMatrix = buildFromPoints(points);
+    } else {
+        cerr << "Invalid input type!\n";
+        return 1;
+    }
+
+    if (linkChoice == 1)
+        agglomerative(distanceMatrix, "single");
+    else if (linkChoice == 2)
+        agglomerative(distanceMatrix, "complete");
+    else if (linkChoice == 3)
+        agglomerative(distanceMatrix, "average");
+    else if (linkChoice == 4) {
+        agglomerative(distanceMatrix, "single");
+        agglomerative(distanceMatrix, "complete");
+        agglomerative(distanceMatrix, "average");
+    } else {
+        cerr << "Invalid linkage option!\n";
+        return 1;
+    }
+
+    cout << "\nAll requested clustering(s) completed successfully.\n";
+    return 0;
+}
+11
+#include <bits/stdc++.h>
+using namespace std;
+
+struct P { double x,y; int c=-2; bool seen=false; }; // c: -2=unvisited, -1=noise, >=0 cluster
+
+double dist(const P& a, const P& b){ return hypot(a.x-b.x, a.y-b.y); }
+
+vector<int> neighbors(const vector<P>& pts, int idx, double eps){
+    vector<int> nbr;
+    for(int i=0;i<(int)pts.size();++i)
+        if(dist(pts[idx], pts[i])<=eps) nbr.push_back(i);
+    return nbr;
+}
+
+void expand(vector<P>& pts, int idx, vector<int>& nbrs, int cid, double eps, int minPts){
+    pts[idx].c = cid;
+    for(size_t i=0;i<nbrs.size(); ++i){
+        int n = nbrs[i];
+        if(!pts[n].seen){
+            pts[n].seen = true;
+            auto more = neighbors(pts, n, eps);
+            if((int)more.size() >= minPts)
+                nbrs.insert(nbrs.end(), more.begin(), more.end());
+        }
+        if(pts[n].c == -1) pts[n].c = cid;        // border point or previously noise -> assign cluster
+        if(pts[n].c == -2) pts[n].c = cid;       // unvisited (not strictly necessary but keeps it simple)
+    }
+}
+
+int main(){
+    double eps; int minPts, n;
+    cout << "Enter eps, minPts, n: ";
+    if(!(cin >> eps >> minPts >> n)) return 0;
+
+    vector<P> pts(n);
+    cout << "Enter points (x y):\n";
+    for(int i=0;i<n;i++) cin >> pts[i].x >> pts[i].y;
+
+    int cid = 0;
+    for(int i=0;i<n;i++){
+        if(pts[i].seen) continue;
+        pts[i].seen = true;
+        auto nbrs = neighbors(pts, i, eps);
+        if((int)nbrs.size() < minPts){
+            pts[i].c = -1; // noise for now
+        } else {
+            expand(pts, i, nbrs, cid++, eps, minPts);
+        }
+    }
+
+    cout << "\nResults:\n";
+    for(auto &p: pts){
+        cout << "(" << p.x << "," << p.y << ") -> Cluster " << p.c << "\n";
+    }
+    return 0;
+}
+
+
+12
+#include <bits/stdc++.h>
+using namespace std;
+
+// ---------- Helper Functions ----------
+double entropy(const vector<string>& y) {
+    map<string,int> freq;
+    for (auto &v : y) freq[v]++;
+    double e = 0, n = y.size();
+    for (auto it = freq.begin(); it != freq.end(); ++it) {
+        double p = (double)it->second / n;
+        e -= p * log2(p);
+    }
+    return e;
+}
+
+double gini(const vector<string>& y) {
+    map<string,int> freq;
+    for (auto &v : y) freq[v]++;
+    double g = 1, n = y.size();
+    for (auto it = freq.begin(); it != freq.end(); ++it) {
+        double p = (double)it->second / n;
+        g -= p * p;
+    }
+    return g;
+}
+
+// ---------- Main ----------
+int main() {
+    string fname;
+    cout << "Enter CSV file: ";
+    cin >> fname;
+    ifstream f(fname.c_str());
+    if (!f) { cout << "File not found!\n"; return 0; }
+
+    string line, cell;
+    vector<string> head;
+    vector<vector<string>> data;
+
+    // Read header
+    if (getline(f, line)) {
+        stringstream ss(line);
+        while (getline(ss, cell, ',')) head.push_back(cell);
+    }
+
+    // Read data
+    while (getline(f, line)) {
+        stringstream ss(line);
+        vector<string> row;
+        while (getline(ss, cell, ',')) row.push_back(cell);
+        if (!row.empty()) data.push_back(row);
+    }
+
+    int target = head.size() - 1;
+    cout << "\nTarget column: " << head[target] << "\n";
+
+    // All target labels
+    vector<string> all;
+    for (size_t i = 0; i < data.size(); i++)
+        all.push_back(data[i][target]);
+    double totalE = entropy(all);
+
+    // For each attribute
+    for (int a = 0; a < target; a++) {
+        map<string, vector<string>> groups;
+        for (size_t i = 0; i < data.size(); i++)
+            groups[data[i][a]].push_back(data[i][target]);
+
+        double wE = 0, wG = 0;
+        for (auto it = groups.begin(); it != groups.end(); ++it) {
+            double w = (double)it->second.size() / data.size();
+            wE += w * entropy(it->second);
+            wG += w * gini(it->second);
+        }
+
+        cout << "\nAttribute: " << head[a]
+             << "\nInfo Gain = " << totalE - wE
+             << "\nGini Index = " << wG << "\n";
+    }
+}
+
+
+13
+#include <bits/stdc++.h>
+using namespace std;
+
+struct Record { map<string,string> features; string cls; };
+vector<Record> data;
+vector<string> attrs, classes;
+map<string,double> prior;
+
+// ---------- Load CSV ----------
+void loadCSV(string file){
+    ifstream f(file);
+    string line; bool header=true;
+    while(getline(f,line)){
+        stringstream ss(line); string cell; vector<string> row;
+        while(getline(ss,cell,',')){ 
+            cell.erase(remove_if(cell.begin(),cell.end(),::isspace),cell.end());
+            transform(cell.begin(),cell.end(),cell.begin(),::tolower);
+            row.push_back(cell);
+        }
+        if(header){ attrs.assign(row.begin(), row.end()-1); header=false; }
+        else{
+            Record r;
+            for(int i=0;i<(int)attrs.size();i++) r.features[attrs[i]]=row[i];
+            r.cls=row.back(); data.push_back(r);
+            if(find(classes.begin(),classes.end(),r.cls)==classes.end()) classes.push_back(r.cls);
+        }
+    }
+    cout<<"Dataset loaded!\n";
+}
+
+// ---------- Calculate Priors ----------
+void calcPriors(){
+    for(auto &c:classes){
+        int cnt=0; for(auto &r:data) if(r.cls==c) cnt++;
+        prior[c]=(double)cnt/data.size();
+    }
+}
+
+// ---------- Likelihood ----------
+double likelihood(string attr,string val,string cls){
+    int tot=0,match=0;
+    for(auto &r:data)
+        if(r.cls==cls){ tot++; if(r.features[attr]==val) match++; }
+    return tot? (double)match/tot : 0;
+}
+
+// ---------- Classify ----------
+string classify(map<string,string> test){
+    map<string,double> post;
+    for(auto &c:classes){
+        double prob=prior[c];
+        for(auto &a:test) prob*=likelihood(a.first,a.second,c);
+        post[c]=prob;
+    }
+
+    cout<<"\n=== Posterior Probabilities ===\n";
+    string best; double maxP=-1;
+    for(auto &p:post){
+        cout<<"P("<<p.first<<"|X) = "<<fixed<<setprecision(6)<<p.second<<"\n";
+        if(p.second>maxP){ maxP=p.second; best=p.first; }
+    }
+    return best;
+}
+
+// ---------- Main ----------
+int main(){
+    string file; cout<<"Enter CSV file: "; cin>>file;
+    loadCSV(file);
+    calcPriors();
+
+    map<string,string> test;
+    cout<<"\nEnter values:\n";
+    for(auto &a:attrs){
+        cout<<a<<": "; cin>>test[a];
+        transform(test[a].begin(),test[a].end(),test[a].begin(),::tolower);
+    }
+
+    string pred=classify(test);
+    cout<<"\nPredicted Class: "<<pred<<"\n";
+}
+
+Outlook	Temperature	Humidity	Wind	Class
+sunny	hot	high	weak	NoPlay
+sunny	hot	high	strong	NoPlay
+overcast	hot	high	weak	Play
+rain	mild	high	weak	Play
+rain	cool	normal	weak	Play
+rain	cool	normal	strong	NoPlay
+overcast	cool	normal	strong	Play
+sunny	mild	high	weak	NoPlay
+sunny	cool	normal	weak	Play
+rain	mild	normal	weak	Play
+sunny	mild	normal	strong	Play
+overcast	mild	high	strong	Play
+overcast	hot	normal	weak	Play
+rain	mild	high	strong	NoPlay
+
+14
+#include <iostream>
+#include <vector>
+#include <iomanip> // for setprecision
+using namespace std;
+
+int main() {
+    int n;
+    cout << "Enter number of data points: ";
+    cin >> n;
+
+    vector<double> x(n), y(n);
+
+    cout << "Enter X values:\n";
+    for (int i = 0; i < n; i++) {
+        cin >> x[i];
+    }
+
+    cout << "Enter Y values:\n";
+    for (int i = 0; i < n; i++) {
+        cin >> y[i];
+    }
+
+    // Calculate sums
+    double sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
+    for (int i = 0; i < n; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += x[i] * y[i];
+        sum_x2 += x[i] * x[i];
+    }
+
+    // Calculate slope (m) and intercept (c)
+    double m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+    double c = (sum_y * sum_x2 - sum_x * sum_xy) / (n * sum_x2 - sum_x * sum_x);
+
+    cout << fixed << setprecision(3); // round to 3 decimal places
+    cout << "\n--- Linear Regression Result ---\n";
+    cout << "Slope (m): " << m << endl;
+    cout << "Intercept (c): " << c << endl;
+
+    // Print equation
+    cout << "Equation of line: Y = " << m << "X ";
+    if (c >= 0)
+        cout << "+ " << c << endl;
+    else
+        cout << "- " << -c << endl;
+
+    // Predict Y for user-given X
+    double x_val;
+    cout << "\nEnter value of X to predict Y: ";
+    cin >> x_val;
+
+    double y_pred = m * x_val + c;
+    cout << "Predicted value of Y: " << y_pred << endl;
+
+    return 0;
+}
+
+
